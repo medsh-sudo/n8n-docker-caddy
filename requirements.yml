@@ -1,0 +1,12 @@
+---
+# Ansible Collections
+collections:
+  - name: community.docker
+    version: ">=3.0.0"
+  - name: ansible.posix
+    version: ">=1.4.0"
+
+# Ansible Roles (if needed in the future)
+# roles:
+#   - name: geerlingguy.docker
+#     version: ">=6.0.0"
