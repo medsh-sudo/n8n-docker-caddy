@@ -1,0 +1,34 @@
+---
+# n8n Configuration
+n8n_base_path: "/opt/n8n"
+n8n_data_path: "/opt/n8n/data"
+n8n_logs_path: "/opt/n8n/logs"
+n8n_port: 5678
+n8n_version: "latest"
+
+# Database Configuration (PostgreSQL)
+n8n_db_type: "postgresdb"
+n8n_db_host: "localhost"
+n8n_db_port: 5432
+n8n_db_name: "n8n"
+n8n_db_user: "n8n"
+n8n_db_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+
+# Redis Configuration
+n8n_redis_host: "localhost"
+n8n_redis_port: 6379
+n8n_redis_password: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+
+# n8n Environment Variables
+n8n_webhook_url: "http://{{ ansible_default_ipv4.address }}:{{ n8n_port }}"
+n8n_generic_timezone: "UTC"
+n8n_executions_data_prune: true
+n8n_executions_data_max_age: 168
+n8n_executions_data_prune_timeout: 3600
+
+# Security
+n8n_encryption_key: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+n8n_user_management_jwt_secret: "{{ lookup('password', '/dev/null length=32 chars=ascii_letters,digits') }}"
+
+# Docker Configuration
+docker_compose_version: "2.20.0"

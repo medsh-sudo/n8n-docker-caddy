@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  n8n:
+    image: n8nio/n8n:{{ n8n_version }}
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "{{ n8n_port }}:5678"
+    environment:
+      - DB_TYPE={{ n8n_db_type }}
+      - DB_POSTGRESDB_HOST=postgres
+      - DB_POSTGRESDB_PORT={{ n8n_db_port }}
+      - DB_POSTGRESDB_DATABASE={{ n8n_db_name }}
+      - DB_POSTGRESDB_USER={{ n8n_db_user }}
+      - DB_POSTGRESDB_PASSWORD={{ n8n_db_password }}
+      - REDIS_HOST=redis
+      - REDIS_PORT={{ n8n_redis_port }}
+      - REDIS_PASSWORD={{ n8n_redis_password }}
+      - N8N_BASIC_AUTH_ACTIVE=true
+      - N8N_BASIC_AUTH_USER=admin
+      - N8N_BASIC_AUTH_PASSWORD={{ lookup('password', '/dev/null length=16 chars=ascii_letters,digits') }}
+      - WEBHOOK_URL={{ n8n_webhook_url }}
+      - GENERIC_TIMEZONE={{ n8n_generic_timezone }}
+      - EXECUTIONS_DATA_PRUNE={{ n8n_executions_data_prune | lower }}
+      - EXECUTIONS_DATA_MAX_AGE={{ n8n_executions_data_max_age }}
+      - EXECUTIONS_DATA_PRUNE_TIMEOUT={{ n8n_executions_data_prune_timeout }}
+      - N8N_ENCRYPTION_KEY={{ n8n_encryption_key }}
+      - N8N_USER_MANAGEMENT_JWT_SECRET={{ n8n_user_management_jwt_secret }}
+      - N8N_LOG_LEVEL=info
+      - N8N_LOG_OUTPUT=console
+      - N8N_PORT=5678
+      - N8N_HOST=0.0.0.0
+      - N8N_PROTOCOL=http
+      - N8N_EDITOR_BASE_URL={{ n8n_webhook_url }}
+    volumes:
+      - {{ n8n_data_path }}:/home/node/.n8n
+      - {{ n8n_logs_path }}:/var/log/n8n
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - n8n-network
+
+  postgres:
+    image: postgres:15
+    container_name: n8n-postgres
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB={{ n8n_db_name }}
+      - POSTGRES_USER={{ n8n_db_user }}
+      - POSTGRES_PASSWORD={{ n8n_db_password }}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - n8n-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: n8n-redis
+    restart: unless-stopped
+    command: redis-server --requirepass {{ n8n_redis_password }}
+    volumes:
+      - redis_data:/data
+    networks:
+      - n8n-network
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  n8n-network:
+    driver: bridge

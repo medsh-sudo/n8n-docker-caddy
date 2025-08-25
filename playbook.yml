@@ -1,0 +1,145 @@
+---
+- name: Deploy n8n Server with Docker
+  hosts: n8n_servers
+  become: yes
+  vars_files:
+    - group_vars/all.yml
+  
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+      tags: [always]
+
+  tasks:
+    - name: Install required packages
+      apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - software-properties-common
+          - python3-pip
+          - python3-setuptools
+        state: present
+      tags: [packages]
+
+    - name: Add Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+      tags: [docker]
+
+    - name: Add Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+      tags: [docker]
+
+    - name: Install Docker packages
+      apt:
+        name:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+          - docker-compose-plugin
+        state: present
+      tags: [docker]
+
+    - name: Start and enable Docker service
+      systemd:
+        name: docker
+        state: started
+        enabled: yes
+      tags: [docker]
+
+    - name: Add user to docker group
+      user:
+        name: "{{ ansible_user }}"
+        groups: docker
+        append: yes
+      tags: [docker]
+
+    - name: Create n8n directory
+      file:
+        path: "{{ n8n_base_path }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      tags: [n8n]
+
+    - name: Create n8n data directory
+      file:
+        path: "{{ n8n_data_path }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      tags: [n8n]
+
+    - name: Create n8n logs directory
+      file:
+        path: "{{ n8n_logs_path }}"
+        state: directory
+        mode: '0755'
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+      tags: [n8n]
+
+    - name: Copy environment file
+      template:
+        src: templates/env.j2
+        dest: "{{ n8n_base_path }}/.env"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      tags: [n8n]
+
+    - name: Copy docker-compose.yml
+      template:
+        src: templates/docker-compose.yml.j2
+        dest: "{{ n8n_base_path }}/docker-compose.yml"
+        owner: "{{ ansible_user }}"
+        group: "{{ ansible_user }}"
+        mode: '0644'
+      tags: [n8n]
+
+    - name: Create n8n systemd service
+      template:
+        src: templates/n8n.service.j2
+        dest: /etc/systemd/system/n8n.service
+        mode: '0644'
+      tags: [n8n]
+
+    - name: Reload systemd daemon
+      systemd:
+        daemon_reload: yes
+      tags: [n8n]
+
+    - name: Start n8n service
+      systemd:
+        name: n8n
+        state: started
+        enabled: yes
+      tags: [n8n]
+
+    - name: Wait for n8n to be ready
+      uri:
+        url: "http://{{ ansible_default_ipv4.address }}:{{ n8n_port }}"
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 30
+      delay: 10
+      tags: [n8n]
+
+  handlers:
+    - name: restart n8n
+      systemd:
+        name: n8n
+        state: restarted
+      listen: "restart n8n"

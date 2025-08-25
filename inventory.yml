@@ -1,0 +1,16 @@
+---
+all:
+  children:
+    n8n_servers:
+      hosts:
+        n8n-server:
+          ansible_host: "{{ lookup('env', 'N8N_HOST_IP') | default('192.168.1.100') }}"
+          ansible_user: "{{ lookup('env', 'ANSIBLE_USER') | default('ubuntu') }}"
+          ansible_ssh_private_key_file: "{{ lookup('env', 'SSH_KEY_PATH') | default('~/.ssh/id_rsa') }}"
+          ansible_ssh_common_args: '-o StrictHostKeyChecking=no'
+      vars:
+        n8n_base_path: "/opt/n8n"
+        n8n_data_path: "/opt/n8n/data"
+        n8n_logs_path: "/opt/n8n/logs"
+        n8n_port: 5678
+        n8n_version: "latest"
